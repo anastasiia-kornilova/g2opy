@@ -123,6 +123,19 @@ void declareTypesSixDofExpmap(py::module & m) {
         .def("cam_project", &EdgeStereoSE3ProjectXYZOnlyPose::cam_project)
     ;
 
+    py::class_<EdgeLineProjectXYZOnlyPose, BaseUnaryEdge<3, Vector3D, VertexSE3Expmap>>(m, "EdgeLineProjectXYZOnlyPose")
+        .def(py::init<>())
+        .def("compute_error", &EdgeLineProjectXYZOnlyPose::computeError)
+        .def("linearize_oplus", &EdgeLineProjectXYZOnlyPose::linearizeOplus)
+        .def("cam_project", &EdgeLineProjectXYZOnlyPose::cam_project)
+        .def("chiline", &EdgeLineProjectXYZOnlyPose::chiline)
+        .def_readwrite("fx", &EdgeLineProjectXYZOnlyPose::fx)
+        .def_readwrite("fy", &EdgeLineProjectXYZOnlyPose::fy)
+        .def_readwrite("cx", &EdgeLineProjectXYZOnlyPose::cx)
+        .def_readwrite("cy", &EdgeLineProjectXYZOnlyPose::cy)
+        .def_readwrite("Xw", &EdgeLineProjectXYZOnlyPose::Xw)
+    ;
+
 
     // class G2O_TYPES_SBA_API EdgeProjectPSI2UV : public g2o::BaseMultiEdge<2, Vector2D>
     // class G2O_TYPES_SBA_API EdgeProjectXYZ2UVU : public BaseBinaryEdge<3, Vector3D, VertexSBAPointXYZ, VertexSE3Expmap>

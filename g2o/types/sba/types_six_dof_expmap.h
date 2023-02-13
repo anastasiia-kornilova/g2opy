@@ -260,6 +260,98 @@ class EdgeSE3ProjectXYZOnlyPose : public BaseUnaryEdge<2, Vector2D, VertexSE3Exp
   double fx, fy, cx, cy;
 };
 
+class EdgeLineProjectXYZOnlyPose : public g2o::BaseUnaryEdge<3, Vector3D, g2o::VertexSE3Expmap> {
+public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+
+    EdgeLineProjectXYZOnlyPose() {}
+
+    virtual void computeError() {
+        const g2o::VertexSE3Expmap *v1 = static_cast<const g2o::VertexSE3Expmap *>(_vertices[0]);
+        Eigen::Vector3d obs = _measurement;
+        Eigen::Vector2d proj = cam_project(v1->estimate().map(Xw));
+        _error(0) = obs(0) * proj(0) + obs(1) * proj(1) + obs(2);
+        _error(1) = 0;
+        _error(2) = 0;
+    }
+
+    double chiline() {
+        return _error(0) * _error(0);
+    }
+
+    virtual void linearizeOplus()
+     {
+        g2o::VertexSE3Expmap *vi = static_cast<g2o::VertexSE3Expmap *>(_vertices[0]);
+        Eigen::Vector3d xyz_trans = vi->estimate().map(Xw);
+
+        double x = xyz_trans[0];
+        double y = xyz_trans[1];
+        double invz = 1.0 / xyz_trans[2];
+        double invz_2 = invz * invz;
+
+        double lx = _measurement(0);
+        double ly = _measurement(1);
+
+        _jacobianOplusXi(0, 0) = -fy * ly - fx * lx * x * y * invz_2 - fy * ly * y * y * invz_2;
+        _jacobianOplusXi(0, 1) = fx * lx + fx * lx * x * x * invz_2 + fy * ly * x * y * invz_2;
+        _jacobianOplusXi(0, 2) = -fx * lx * y * invz + fy * ly * x * invz;
+        _jacobianOplusXi(0, 3) = fx * lx * invz;
+        _jacobianOplusXi(0, 4) = fy * ly * invz;
+        _jacobianOplusXi(0, 5) = -(fx * lx * x + fy * ly * y) * invz_2;
+        _jacobianOplusXi(1, 0) = 0;
+        _jacobianOplusXi(1, 1) = 0;
+        _jacobianOplusXi(1, 2) = 0;
+        _jacobianOplusXi(1, 3) = 0;
+        _jacobianOplusXi(1, 4) = 0;
+        _jacobianOplusXi(1, 5) = 0;
+        _jacobianOplusXi(2, 0) = 0;
+        _jacobianOplusXi(2, 1) = 0;
+        _jacobianOplusXi(2, 2) = 0;
+        _jacobianOplusXi(2, 3) = 0;
+        _jacobianOplusXi(2, 4) = 0;
+        _jacobianOplusXi(2, 5) = 0;
+  }
+
+    bool read(std::istream &is) {
+        for (int i = 0; i < 3; i++) {
+            is >> _measurement[i];
+        }
+
+        for (int i = 0; i < 3; ++i) {
+            for (int j = i; j < 3; ++j) {
+                is >> information()(i, j);
+                if (i != j)
+                    information()(j, i) = information()(i, j);
+            }
+        }
+        return true;
+    }
+
+    bool write(std::ostream &os) const {
+        for (int i = 0; i < 3; i++) {
+            os << measurement()[i] << " ";
+        }
+
+        for (int i = 0; i < 3; ++i) {
+            for (int j = i; j < 3; ++j) {
+                os << " " << information()(i, j);
+            }
+        }
+        return os.good();
+    }
+
+    Eigen::Vector2d cam_project(const Eigen::Vector3d &trans_xyz) {
+        Eigen::Vector2d proj = g2o::project(trans_xyz);
+        Eigen::Vector2d res;
+        res[0] = proj[0] * fx + cx;
+        res[1] = proj[1] * fy + cy;
+        return res;
+    }
+
+    Eigen::Vector3d Xw;
+    double fx, fy, cx, cy;
+};
+
 // Projection using focal_length in x and y directions stereo
 class EdgeStereoSE3ProjectXYZ : public BaseBinaryEdge<3, Vector3D, VertexSBAPointXYZ, VertexSE3Expmap> {
  public:
